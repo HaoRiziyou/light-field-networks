@@ -145,4 +145,4 @@ dependencies:
     - torch==1.8.1+cpu
     - torchvision==0.9.1+cpu
     - typing-extensions==3.10.0.0
-prefix: /home/sitzmann/anaconda3/envs/lf
+prefix: /home/mq/Documents/Anaconda3/envs/lf
