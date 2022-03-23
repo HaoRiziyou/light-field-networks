@@ -1,4 +1,4 @@
-name: /om2/user/sitzmann/lf
+name: lf
 channels:
   - pytorch
   - plotly
@@ -218,4 +218,4 @@ dependencies:
     - tensorboard-plugin-wit==1.8.0
     - urllib3==1.26.3
     - werkzeug==1.0.1
-prefix: /om2/user/sitzmann/lf
+prefix: /home/hpc/iwi9/iwi9008h/anaconda3/envs/lf
