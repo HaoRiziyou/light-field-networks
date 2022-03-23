@@ -9,7 +9,7 @@
 # number of nodes and task
 #SBATCH --nodes=1             
 # job name 
-#SBATCH --job-name=Train_nmr_2gpu
+#SBATCH --job-name=Rec_fullnmr_2gpu
 # do not export environment variables
 #SBATCH --export=NONE
 
@@ -18,5 +18,5 @@ conda activate lf
 # do not export environment variables
 unset SLURM_EXPORT_ENV
 
-srun --mpi=pmi2 python3 ./experiment_scripts/train_nmr.py --data_root=./data/NMR/ --experiment_name=nmr_train_20_2 --gpus=2
+srun --mpi=pmi2 python3 ./experiment_scripts/rec_nmr.py --data_root=/home/woody/iwi9/iwi9008h/data/NMR_Dataset/ --experiment_name=nmr_full_rec --gpus=2 --checkpoint_path=./data/pretrained/NMR_train.pth
 
