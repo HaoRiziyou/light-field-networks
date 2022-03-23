@@ -1,24 +1,22 @@
 #!/bin/bash -l
 #
-# allocate 1 node (4 Cores) for 6 hours
-#PBS -l nodes=1:ppn=8:gtx1080,walltime=06:00:00
-#
+# start 2 MPI processes
+# allocate nodes for 24 hours
+#SBATCH --time=24:00:00
+# allocated 4 GPU (type not specified)
+#SBATCH --gres=gpu:a100:2
+#SBATCH --partition=a100
+# number of nodes and task
+#SBATCH --nodes=1             
 # job name 
-#PBS -N Sparsejob_33
-#
-# first non-empty non-comment line ends PBS options
+#SBATCH --job-name=Train_nmr_2gpu
+# do not export environment variables
+#SBATCH --export=NONE
 
-#conda activate
+#coonda
 conda activate lf
-#load required modules (compiler, ...)
+# do not export environment variables
+unset SLURM_EXPORT_ENV
 
-#module load cuda/11.
-# jobs always start in $HOME - 
-# change to work directory
-cd  ${PBS_O_WORKDIR}
-#cd ./lfn/light-field-networks/
-export OMP_NUM_THREADS=4
- 
-# run 
-python ./experiment_scripts/train_single_class.py --data_root=./data/cars_train.hdf5 --experiment_name=car
+srun --mpi=pmi2 python3 ./experiment_scripts/train_nmr.py --data_root=./data/NMR/ --experiment_name=nmr_train_20_2 --gpus=2
 
