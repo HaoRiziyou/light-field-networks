@@ -61,7 +61,7 @@ def convert_image(img, type):
 
     if not 'normal' in type:
         img = util.lin2img(img)[0]
-    img = img.cpu().numpy().transpose(1, 2, 0)
+    img = img.cpu().numpy().transpose(1,2,0)
 
     if 'rgb' in type or 'normal' in type:
         img += 1.
@@ -102,8 +102,9 @@ if opt.dataset == 'NMR':
     class_counter = defaultdict(int)
 else:
     psnrs = []
-
 with torch.no_grad():
+    ###########################
+    print(f"********len of dataset: {len(dataset)}****")
     for i in range(len(dataset)):
         print(f"Object {i:04d}")
 
@@ -151,14 +152,14 @@ with torch.no_grad():
                 for k, v in out_dict.items():
                     img = convert_image(v, k)
                     if k == 'gt_rgb':
-                        cv2.imwrite(str(instance_dir / f"{j:06d}_{k}.png"), img)
+                        cv2.imwrite(str(instance_dir / f"{j:06d}_{k}.png"), cv2.cvtColor(img,cv2.COLOR_RGB2BGR))
                     elif k == 'rgb':
-                        cv2.imwrite(str(instance_dir / f"{j:06d}.png"), img)
+                        cv2.imwrite(str(instance_dir / f"{j:06d}.png"), cv2.cvtColor(img,cv2.COLOR_RGB2BGR))
             elif i < opt.save_out_first_n:
                 img = convert_image(out_dict['gt_rgb'], 'rgb')
-                cv2.imwrite(str(instance_dir / f"{j:06d}_gt.png"), img)
+                cv2.imwrite(str(instance_dir / f"{j:06d}_gt.png"), cv2.cvtColor(img,cv2.COLOR_RGB2BGR))
                 img = convert_image(out_dict['rgb'], 'rgb')
-                cv2.imwrite(str(instance_dir / f"{j:06d}.png"), img)
+                cv2.imwrite(str(instance_dir / f"{j:06d}.png"), cv2.cvtColor(img,cv2.COLOR_RGB2BGR))
 
         if opt.dataset == 'NMR':
             mean_dict = {}
