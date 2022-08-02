@@ -34,11 +34,11 @@ def multiscale_training(train_function, dataloader_callback, dataloader_iters, d
         dataloaders = dataloader_callback(*params)
         model_dir = os.path.join(org_model_dir, '_'.join(map(str, params)))
 
-        model, optimizers = train_function(dataloaders=dataloaders, model_dir=model_dir, model=model,
+        train_function(dataloaders=dataloaders, model_dir=model_dir, model=model,
                                            optimizers=optimizers,
                                            max_steps=max_steps, **kwargs)
 
- 
+   
 
 def train(model, dataloaders, epochs, lr, epochs_til_checkpoint, model_dir, loss_fn, steps_til_summary=1,
           summary_fn=None, iters_til_checkpoint=None, clip_grad=False, val_loss_fn=None, val_summary_fn=None,
@@ -46,11 +46,19 @@ def train(model, dataloaders, epochs, lr, epochs_til_checkpoint, model_dir, loss
           loss_schedules=None, device='gpu'):
     if optimizers is None:
         optimizers = [torch.optim.Adam(lr=lr, params=model.parameters())]
-  
+#    np.set_printoptions(threshold=sys.maxsize)    
+#    for step, (model_input, gt) in enumerate(dataloaders):
+#        print(step, model_input,gt)
+#        
+#        break
+#    print(type(dataloaders)) 
+#    torch.save(dataloaders,'/home/hpc/iwi9/iwi9008h/lfn/light-field-networks/dataloader.pth' )    
 
     if isinstance(dataloaders, tuple):
         
         train_dataloader, val_dataloader = dataloaders
+        print(*dataloaders)
+        print(traon)
         assert val_loss_fn is not None, "If validation set is passed, have to pass a validation loss_fn!"
     else:
         train_dataloader, val_dataloader = dataloaders, None
@@ -75,7 +83,7 @@ def train(model, dataloaders, epochs, lr, epochs_til_checkpoint, model_dir, loss
         writer = SummaryWriter(summaries_dir, flush_secs=10)
 
     total_steps = 0
-
+    #print(f"len of traind_dataloader : {len(train_dataloader)} , {train_dataloader}")
     with tqdm(total=len(train_dataloader) * epochs) as pbar:
         for epoch in range(epochs):
             if not epoch % epochs_til_checkpoint and epoch and rank == 0:

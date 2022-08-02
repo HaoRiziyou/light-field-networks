@@ -88,7 +88,7 @@ class SceneInstanceDataset():
         except:
             rgb = np.zeros((self.img_sidelength*self.img_sidelength, 3))
 
-       
+        #print(f"*****idx:{idx}******")
         pose = self.poses[idx]
         sample = {
             "instance_idx": torch.Tensor([self.instance_idx]).squeeze(),
@@ -124,15 +124,14 @@ def get_instance_datasets(root, max_num_instances=None, specific_observation_idc
 
     dummy_img_path = data_util.glob_imgs(os.path.join(instance_dirs[0], "image"))[0]
     dummy_img = data_util.load_rgb(dummy_img_path)
+    #print(f"ddummy_img_path : {dummy_img_path}")
     org_sidelength = dummy_img.shape[1]
 
     uv = np.mgrid[0:org_sidelength, 0:org_sidelength].astype(np.int32).transpose(1, 2, 0)
     uv = cv2.resize(uv, (sidelen, sidelen), interpolation=cv2.INTER_NEAREST)
     uv = torch.from_numpy(np.flip(uv, axis=-1).copy()).long()
     uv = uv.reshape(-1, 2).float()
-    
-    #torch.cuda.manual_seed(1)
-    
+
     random.seed(0)
     np.random.seed(0)
     
@@ -193,7 +192,7 @@ class SceneClassDataset(torch.utils.data.Dataset):
         self.query_sparsity = query_sparsity
         self.sparsity_list = sparsity_list
         self.rand_idcs = rand_idcs
-        #self.rand_idcs = rand_idcs
+
         
         if viewlist is not None:
             with open(viewlist, "r") as f:
@@ -205,7 +204,6 @@ class SceneClassDataset(torch.utils.data.Dataset):
 
         object_classes = sorted(glob(os.path.join(root_dir, "*/")))
         all_objects = []
-
         for object_class in object_classes:
             file_list = open(object_class + 'softras_' + dataset_type + ".lst", "r")
             content = file_list.read()
@@ -222,7 +220,6 @@ class SceneClassDataset(torch.utils.data.Dataset):
         dummy_img = data_util.load_rgb(dummy_img_path)
         org_sidelength = dummy_img.shape[1]
 
-
         uv = np.mgrid[0:org_sidelength, 0:org_sidelength].astype(np.int32).transpose(1, 2, 0)
         uv = cv2.resize(uv, (img_sidelength, img_sidelength), interpolation=cv2.INTER_NEAREST)
         uv = torch.from_numpy(np.flip(uv, axis=-1).copy()).long()
@@ -233,7 +230,6 @@ class SceneClassDataset(torch.utils.data.Dataset):
         
         if max_num_instances is not None:
             self.instance_dirs = self.instance_dirs[:max_num_instances]
-        
 
         random.seed(0)
         np.random.seed(0)
@@ -241,7 +237,7 @@ class SceneClassDataset(torch.utils.data.Dataset):
         for idx, dir in enumerate(self.instance_dirs):
             viewlist_key = '/'.join(dir.split('/')[-2:])
             specific_observation_idcs = viewlist[viewlist_key] if viewlist is not None else specific_observation_idcs
-
+            #print(f"specific_observation_idcs: {specific_observation_idcs}")
             self.all_instances.append(SceneInstanceDataset(root_dir=root_dir,
                                                            instance_idx=idx,
                                                            instance_dir=dir,
@@ -253,18 +249,17 @@ class SceneClassDataset(torch.utils.data.Dataset):
 
         self.num_per_instance_observations = [len(obj) for obj in self.all_instances]
         self.num_instances = len(self.all_instances)
-
+        print(f"self.num_instances: {len(self.all_instances)}")
+        print(f"self.all_instances: {self.all_instances}")
         
     def sparsify(self, dict, sparsity, sparsity_list, rand_idcs):
         new_dict = {}
         if sparsity is None:
             """
-            return dict and rand_idcs ,if no set to 0
+            return dict and rand_idcs ,if no set to None
             """
             return dict,None
         else:
-            # Sample upper_limit pixel idcs at random.            
-
             rand_idcs = rand_idcs
 
             # make sure it will be a quadratic number and the least is 64
@@ -282,7 +277,13 @@ class SceneClassDataset(torch.utils.data.Dataset):
             for key, v in dict.items():
                 if key not in ['rgb', 'uv']:
                     new_dict[key] = dict[key]
-
+            
+            #print(f"rand_idcs : {rand_idcs}")
+            
+               
+            #print(f"rand in the sparsify size:{rand_idcs.size}")
+            
+            #print(f"sparsity_list: {sparsity_list}")
             return new_dict,rand_idcs
 
     def set_img_sidelength(self, new_img_sidelength):
@@ -330,7 +331,6 @@ class SceneClassDataset(torch.utils.data.Dataset):
         post_input = []
 
         obj_idx, det_idx = self.get_instance_idx(idx)
-        #print(f"Here is obj_idx and det_idx: {obj_idx} ,{det_idx}")  0,0
 
         if self.vary_context_number and self.num_context > 0:
             num_context = np.random.randint(1, self.num_context+1)
@@ -345,6 +345,7 @@ class SceneClassDataset(torch.utils.data.Dataset):
                 sample_idcs = np.random.choice(len(self.all_instances[obj_idx]), replace=True,
                                                size=self.num_context+self.num_trgt)
 
+            
         
 
 
@@ -360,10 +361,7 @@ class SceneClassDataset(torch.utils.data.Dataset):
             post_input[-1]['mask'] = torch.Tensor([1.])
 
             sub_sample, rand_idcs = self.sparsify(sample, self.query_sparsity,self.sparsity_list, self.rand_idcs)
-
             trgt.append(sub_sample)
-     
-        
 
         for i in range(self.num_context):
             if self.test:
@@ -385,7 +383,9 @@ class SceneClassDataset(torch.utils.data.Dataset):
                     context[-1]['mask'] = torch.Tensor([0.])
             else:
                 context[-1]['mask'] = torch.Tensor([1.])
+           
 
+            
         
         post_input = self.collate_fn(post_input)
        

@@ -201,7 +201,6 @@ def detach_all(tensor):
 
 
 def lin2img(tensor, image_resolution=None, mode='torch'):
-
     
     if len(tensor.shape) == 3:
         batch_size, num_samples, channels = tensor.shape
