@@ -1,13 +1,14 @@
 ### Description
-A  thesis based on this reposit repository.Eastablish the ransac process on the light field networks to reconstruct occluded images
+A  thesis based on this reposit repository.Eastablish the ransac process on the light field networks to reconstruct occluded images  
+README_original.md is the original readme file.
 
-change:config.py for saving files  
+change config.py for saving files root 
 gpus:1  
 sparsity：64 to choose initial random image pixels  
 
 In the experiment, the test is tested on each instance separately which means one file name in softras_test.lst. And the batch_size is set to 1 for one instance.
 One instace can have multiple iamges with different poses.  
-Note that the rec_nmr.py script uses the viewlist under ./experiment_scripts/viewlists/src_dvr.txt to pick which views to reconstruct the objects from.
+Note that the rec_nmr.py script uses the viewlist under ./experiment_scripts/viewlists/src_dvr.txt to pick which views to reconstruct the objects from. We have changed it to the index 0 for making the first file in data root to pick from easily.
 
 
 ### Command
