@@ -1,3 +1,12 @@
+"""
+      establish ransac process rec -> test -> rec ->test
+      before reconstructing test object, adjust the batch_size :dataloader_params=((64, 1, None),)
+      test one instance of plane  data will be:eg 4a559ef6547b685d8aed56c1a220a07d
+      typical command: srun --mpi=pmi2 python3 experiment_scripts/ransac.py --data_root=path_to_nmr_dataset --dataset=NMR  --checkpoint=path_to_training_checkpoint --experiment_name=reconstruct_name --test_experiment_name=test_name --gpus=1 --sparsity= the number you want to sparsify(typical 64)
+
+"""
+
+
 import sys
 import os
 import numpy as np
