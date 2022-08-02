@@ -89,10 +89,10 @@ class LightFieldModel(nn.Module):
         intrinsics = util.flatten_first_two(query_dict["intrinsics"])
         uv = util.flatten_first_two(query_dict["uv"].float())
         return pose, intrinsics, uv
-
+        
     def forward(self, input, val=False, compute_depth=False, timing=False):
         out_dict = {}
-        query = input['query']
+        query = input['query']           
         b, n_ctxt = query["uv"].shape[:2]
         n_qry, n_pix = query["uv"].shape[1:3]
 

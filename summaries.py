@@ -9,11 +9,13 @@ import torchvision
 def img_summaries(model, model_input, ground_truth, loss_summaries, model_output, writer, iter, prefix="", img_shape=None):
     predictions = model_output['rgb']
     trgt_imgs = ground_truth['rgb']
+    
     indices = model_input['query']['instance_idx']
 
     predictions = util.flatten_first_two(predictions)
     trgt_imgs = util.flatten_first_two(trgt_imgs)
 
+   
     with torch.no_grad():
         if 'context' in model_input and model_input['context']:
             context_images = model_input['context']['rgb'] * model_input['context']['mask'][..., None]

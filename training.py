@@ -1,6 +1,7 @@
 '''Implements a generic training loop.
 '''
 
+import sys
 import os
 import shutil
 from collections import defaultdict
@@ -24,7 +25,6 @@ def average_gradients(model):
             param.grad.data /= size
 
 
-
 def multiscale_training(train_function, dataloader_callback, dataloader_iters, dataloader_params, **kwargs):
     model = kwargs.pop('model', None)
     optimizers = kwargs.pop('optimizers', None)
@@ -38,6 +38,7 @@ def multiscale_training(train_function, dataloader_callback, dataloader_iters, d
                                            optimizers=optimizers,
                                            max_steps=max_steps, **kwargs)
 
+ 
 
 def train(model, dataloaders, epochs, lr, epochs_til_checkpoint, model_dir, loss_fn, steps_til_summary=1,
           summary_fn=None, iters_til_checkpoint=None, clip_grad=False, val_loss_fn=None, val_summary_fn=None,
@@ -45,13 +46,15 @@ def train(model, dataloaders, epochs, lr, epochs_til_checkpoint, model_dir, loss
           loss_schedules=None, device='gpu'):
     if optimizers is None:
         optimizers = [torch.optim.Adam(lr=lr, params=model.parameters())]
+  
 
     if isinstance(dataloaders, tuple):
+        
         train_dataloader, val_dataloader = dataloaders
         assert val_loss_fn is not None, "If validation set is passed, have to pass a validation loss_fn!"
     else:
         train_dataloader, val_dataloader = dataloaders, None
-
+        
     if rank==0:
         if os.path.exists(model_dir):
             if overwrite:
@@ -72,14 +75,14 @@ def train(model, dataloaders, epochs, lr, epochs_til_checkpoint, model_dir, loss
         writer = SummaryWriter(summaries_dir, flush_secs=10)
 
     total_steps = 0
+
     with tqdm(total=len(train_dataloader) * epochs) as pbar:
         for epoch in range(epochs):
             if not epoch % epochs_til_checkpoint and epoch and rank == 0:
                 torch.save(model.state_dict(),
                            os.path.join(checkpoints_dir, 'model_epoch_%04d_iter_%06d.pth' % (epoch, total_steps)))
 
-            for step, (model_input, gt) in enumerate(train_dataloader):
-
+            for step, (model_input, gt) in enumerate(train_dataloader):            
                 if device == 'gpu':
                     model_input = util.dict_to_gpu(model_input)
                     gt = util.dict_to_gpu(gt)

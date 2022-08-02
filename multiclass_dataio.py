@@ -6,6 +6,7 @@ import numpy as np
 from glob import glob
 import data_util
 import util
+import math
 from collections import defaultdict
 
 string2class_dict = {
@@ -87,6 +88,7 @@ class SceneInstanceDataset():
         except:
             rgb = np.zeros((self.img_sidelength*self.img_sidelength, 3))
 
+       
         pose = self.poses[idx]
         sample = {
             "instance_idx": torch.Tensor([self.instance_idx]).squeeze(),
@@ -97,6 +99,7 @@ class SceneInstanceDataset():
             "class": self.instance_class,
             "instance_name": self.instance_name
         }
+
         return sample
 
 
@@ -127,13 +130,17 @@ def get_instance_datasets(root, max_num_instances=None, specific_observation_idc
     uv = cv2.resize(uv, (sidelen, sidelen), interpolation=cv2.INTER_NEAREST)
     uv = torch.from_numpy(np.flip(uv, axis=-1).copy()).long()
     uv = uv.reshape(-1, 2).float()
-
+    
+    #torch.cuda.manual_seed(1)
+    
     random.seed(0)
     np.random.seed(0)
+    
     all_instances = [SceneInstanceDataset(root_dir=root, instance_idx=idx, instance_dir=dir,
-                                          specific_observation_idcs=specific_observation_idcs, img_sidelength=sidelen,
-                                          num_images=max_observations_per_instance, uv=uv)
-                          for idx, dir in enumerate(instance_dirs)]
+                                        specific_observation_idcs=specific_observation_idcs, img_sidelength=sidelen,
+                                        num_images=max_observations_per_instance, uv=uv)
+                        for idx, dir in enumerate(instance_dirs)]
+         
     return all_instances
 
 
@@ -169,17 +176,25 @@ class SceneClassDataset(torch.utils.data.Dataset):
                  test=False,
                  test_context_idcs=None,
                  cache=None,
+                 sparsity_list=None,
+                 rand_idcs = None,
+                 #rand_idcs=None,
                  viewlist=None):
+                 
 
         self.num_context = num_context
         self.num_trgt = num_trgt
-        self.query_sparsity = query_sparsity
+        
         self.img_sidelength = img_sidelength
         self.vary_context_number = vary_context_number
         self.cache = cache
         self.test = test
         self.test_context_idcs = test_context_idcs
-
+        self.query_sparsity = query_sparsity
+        self.sparsity_list = sparsity_list
+        self.rand_idcs = rand_idcs
+        #self.rand_idcs = rand_idcs
+        
         if viewlist is not None:
             with open(viewlist, "r") as f:
                 tmp = [x.strip().split() for x in f.readlines()]
@@ -190,6 +205,7 @@ class SceneClassDataset(torch.utils.data.Dataset):
 
         object_classes = sorted(glob(os.path.join(root_dir, "*/")))
         all_objects = []
+
         for object_class in object_classes:
             file_list = open(object_class + 'softras_' + dataset_type + ".lst", "r")
             content = file_list.read()
@@ -206,15 +222,18 @@ class SceneClassDataset(torch.utils.data.Dataset):
         dummy_img = data_util.load_rgb(dummy_img_path)
         org_sidelength = dummy_img.shape[1]
 
+
         uv = np.mgrid[0:org_sidelength, 0:org_sidelength].astype(np.int32).transpose(1, 2, 0)
         uv = cv2.resize(uv, (img_sidelength, img_sidelength), interpolation=cv2.INTER_NEAREST)
         uv = torch.from_numpy(np.flip(uv, axis=-1).copy()).long()
         uv = uv.reshape(-1, 2).float()
 
         assert (len(self.instance_dirs) != 0), "No objects in the data directory"
-
+        
+        
         if max_num_instances is not None:
             self.instance_dirs = self.instance_dirs[:max_num_instances]
+        
 
         random.seed(0)
         np.random.seed(0)
@@ -222,6 +241,7 @@ class SceneClassDataset(torch.utils.data.Dataset):
         for idx, dir in enumerate(self.instance_dirs):
             viewlist_key = '/'.join(dir.split('/')[-2:])
             specific_observation_idcs = viewlist[viewlist_key] if viewlist is not None else specific_observation_idcs
+
             self.all_instances.append(SceneInstanceDataset(root_dir=root_dir,
                                                            instance_idx=idx,
                                                            instance_dir=dir,
@@ -233,22 +253,37 @@ class SceneClassDataset(torch.utils.data.Dataset):
 
         self.num_per_instance_observations = [len(obj) for obj in self.all_instances]
         self.num_instances = len(self.all_instances)
+
         
-    def sparsify(self, dict, sparsity):
+    def sparsify(self, dict, sparsity, sparsity_list, rand_idcs):
         new_dict = {}
         if sparsity is None:
-            return dict
+            """
+            return dict and rand_idcs ,if no set to 0
+            """
+            return dict,None
         else:
-            # Sample upper_limit pixel idcs at random.
-            rand_idcs = np.random.choice(self.img_sidelength**2, size=sparsity, replace=False)
+            # Sample upper_limit pixel idcs at random.            
+
+            rand_idcs = rand_idcs
+
+            # make sure it will be a quadratic number and the least is 64
+            if sparsity_list is not None:
+                if 64 < sparsity_list.size <= 4096 :
+                    a = math.floor(math.sqrt(sparsity_list.size))
+                    num = a * a
+                    rand_idcs = sparsity_list[:num]
+                else:
+                    rand_idcs = np.random.choice(self.img_sidelength ** 2, size=sparsity, replace=False)
+
             for key in ['rgb', 'uv']:
                 new_dict[key] = dict[key][rand_idcs]
-
+            
             for key, v in dict.items():
                 if key not in ['rgb', 'uv']:
                     new_dict[key] = dict[key]
 
-            return new_dict
+            return new_dict,rand_idcs
 
     def set_img_sidelength(self, new_img_sidelength):
         """For multi-resolution training: Updates the image sidelength with which images are loaded."""
@@ -295,6 +330,7 @@ class SceneClassDataset(torch.utils.data.Dataset):
         post_input = []
 
         obj_idx, det_idx = self.get_instance_idx(idx)
+        #print(f"Here is obj_idx and det_idx: {obj_idx} ,{det_idx}")  0,0
 
         if self.vary_context_number and self.num_context > 0:
             num_context = np.random.randint(1, self.num_context+1)
@@ -303,17 +339,45 @@ class SceneClassDataset(torch.utils.data.Dataset):
             try:
                 sample_idcs = np.random.choice(len(self.all_instances[obj_idx]), replace=False,
                                                size=self.num_context+self.num_trgt)
+                                               
+                print(f"here is sample_idcs: {sample_idcs}")
             except:
                 sample_idcs = np.random.choice(len(self.all_instances[obj_idx]), replace=True,
                                                size=self.num_context+self.num_trgt)
+
+        
+
+
+        
+        for i in range(self.num_trgt):
+            if self.test:
+                sample = self.all_instances[obj_idx][det_idx]
+            else:
+                sample = self.all_instances[obj_idx][sample_idcs[i+self.num_context]]
+
+
+            post_input.append(sample)
+            post_input[-1]['mask'] = torch.Tensor([1.])
+
+            sub_sample, rand_idcs = self.sparsify(sample, self.query_sparsity,self.sparsity_list, self.rand_idcs)
+
+            trgt.append(sub_sample)
+     
+        
 
         for i in range(self.num_context):
             if self.test:
                 sample = self.all_instances[obj_idx][self.test_context_idcs[i]]
             else:
                 sample = self.all_instances[obj_idx][sample_idcs[i]]
+            
+            if rand_idcs is not None:
+                for x in rand_idcs:
+                    
+                    sample['rgb'][x] = torch.Tensor([0.,0.,1.])
             context.append(sample)
 
+            
             if self.vary_context_number:
                 if i < num_context:
                     context[-1]['mask'] = torch.Tensor([1.])
@@ -322,28 +386,16 @@ class SceneClassDataset(torch.utils.data.Dataset):
             else:
                 context[-1]['mask'] = torch.Tensor([1.])
 
-        for i in range(self.num_trgt):
-            if self.test:
-                sample = self.all_instances[obj_idx][det_idx]
-            else:
-                sample = self.all_instances[obj_idx][sample_idcs[i+self.num_context]]
-
-            post_input.append(sample)
-            post_input[-1]['mask'] = torch.Tensor([1.])
-
-            sub_sample = self.sparsify(sample, self.query_sparsity)
-            trgt.append(sub_sample)
-
-        # trgt.append(context[0])
-
+        
         post_input = self.collate_fn(post_input)
-
+       
         if self.num_context > 0:
             context = self.collate_fn(context)
-
+        
         trgt = self.collate_fn(trgt)
 
         return {'context': context, 'query': trgt, 'post_input': post_input}, trgt
+
 
 
 class ImplicitGANDataset():

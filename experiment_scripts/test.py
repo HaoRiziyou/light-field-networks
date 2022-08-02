@@ -102,11 +102,11 @@ if opt.dataset == 'NMR':
     class_counter = defaultdict(int)
 else:
     psnrs = []
+    
+
 with torch.no_grad():
-    ###########################
-    print(f"********len of dataset: {len(dataset)}****")
+
     for i in range(len(dataset)):
-        print(f"Object {i:04d}")
 
         dummy_query = dataset[i][0]
         instance_name = dummy_query['instance_name']
@@ -163,6 +163,7 @@ with torch.no_grad():
 
         if opt.dataset == 'NMR':
             mean_dict = {}
+
             for k, v in class_psnrs.items():
                 mean = np.mean(np.array(v), axis=0)
                 mean_dict[k] = f"{mean[0]:.3f} {mean[1]:.3f}"

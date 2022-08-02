@@ -36,7 +36,7 @@ p.add_argument('--gpus', type=int, default=1)
 # General training options
 p.add_argument('--lr', type=float, default=1e-4)
 p.add_argument('--num_epochs', type=int, default=40001)
-p.add_argument('--epochs_til_ckpt', type=int, default=10)
+p.add_argument('--epochs_til_ckpt', type=int, default=1000)
 p.add_argument('--steps_til_summary', type=int, default=5000)
 p.add_argument('--iters_til_ckpt', type=int, default=10000)
 p.add_argument('--checkpoint_path', default=None)
